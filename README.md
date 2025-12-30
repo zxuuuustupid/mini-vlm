@@ -230,6 +230,7 @@ wget https://hf-mirror.com/datasets/jingyaogong/minimind-v_dataset/resolve/main/
 
 ```bash
 # 基础训练命令（从LLM权重开始，仅训练vision_proj）
+cd trainer    
 python train_pretrain_vlm.py --epochs 4 --from_weight llm
 ```
 

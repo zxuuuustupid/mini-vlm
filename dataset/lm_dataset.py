@@ -79,9 +79,13 @@ class VLMDataset(Dataset):
 # 测试parquet数据读取和可视化
 if __name__ == '__main__':
     import matplotlib.pyplot as plt; plt.rcParams['font.sans-serif'] = ['Arial Unicode MS', 'SimHei']
-    for path in ['pretrain_data.parquet', 'sft_data.parquet']:
+    for filename in ['pretrain_data.parquet', 'sft_data.parquet']:
+        path = os.path.join('dataset', filename)
+        if not os.path.exists(path):
+            print(f"文件未找到: {path}")
+            continue
         t = pq.read_table(path); fig, ax = plt.subplots(1, 5, figsize=(20, 4))
         for i in range(5):
             ax[i].imshow(Image.open(io.BytesIO(t['image_bytes'][i].as_py()))); ax[i].axis('off')
             ax[i].set_title(json.loads(t['conversations'][i].as_py())[1]['content'][:30], fontsize=8)
-        out = path.replace('.parquet', '_preview.png'); plt.savefig(out); print(f'已保存{out}, 共{len(t)}条')
+        out = filename.replace('.parquet', '_preview.png'); plt.savefig(out); print(f'已保存{out}, 共{len(t)}条')
