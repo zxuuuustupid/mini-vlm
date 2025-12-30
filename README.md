@@ -165,7 +165,7 @@ git clone https://huggingface.co/jingyaogong/MiniMind2-V
 
 ```bash
 # load_from='model': 加载原生PyTorch权重, load_from='其他路径': 加载transformers格式
-python eval_vlm.py --load_from model --weight sft_vlm
+python eval_vlm.py --load_from model --weight "llm" --hidden_size 512
 
 # 或使用transformers格式模型
 python eval_vlm.py --load_from MiniMind2-V
@@ -174,7 +174,7 @@ python eval_vlm.py --load_from MiniMind2-V
 ### 4.或启动WebUI
 
 ```bash
-python web_demo_vlm.py
+python scripts/web_demo_vlm.py
 ```
 
 ## Ⅱ 从0开始自己训练

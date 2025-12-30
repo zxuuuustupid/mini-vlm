@@ -13,22 +13,26 @@ from PIL import Image
 from transformers import AutoTokenizer, AutoModelForCausalLM, TextStreamer
 from model.model_vlm import MiniMindVLM, VLMConfig
 from transformers import logging as hf_logging
+# ... import 语句 ...
+current_image_path = "" # 添加这一行
 
 hf_logging.set_verbosity_error()
 warnings.filterwarnings('ignore')
 
 
 def init_model(lm_config):
-    tokenizer = AutoTokenizer.from_pretrained(args.load_from)
+    # 强制从本地'./model'路径加载分词器，避免路径解析问题
+    tokenizer = AutoTokenizer.from_pretrained('./model', trust_remote_code=True)
     if 'model' in args.load_from:
         moe_path = '_moe' if lm_config.use_moe else ''
-        ckp = f'../{args.save_dir}/{args.weight}_{lm_config.hidden_size}{moe_path}.pth'
-        model = MiniMindVLM(lm_config, vision_model_path="../model/vision_model/clip-vit-base-patch16")
+        # 修正权重文件的相对路径
+        ckp = f'./{args.save_dir}/{args.weight}_{lm_config.hidden_size}{moe_path}.pth'
+        model = MiniMindVLM(lm_config, vision_model_path="./model/vision_model/clip-vit-base-patch16")
         state_dict = torch.load(ckp, map_location=args.device)
         model.load_state_dict({k: v for k, v in state_dict.items() if 'mask' not in k}, strict=False)
     else:
         model = AutoModelForCausalLM.from_pretrained(args.load_from, trust_remote_code=True)
-        model.vision_encoder, model.processor = MiniMindVLM.get_vision_model("../model/vision_model/clip-vit-base-patch16")
+        model.vision_encoder, model.processor = MiniMindVLM.get_vision_model("./model/vision_model/clip-vit-base-patch16")
 
     print(f'VLM参数量：{sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.3f} 百万')
 
@@ -138,21 +142,51 @@ def launch_gradio_server(server_name="0.0.0.0", server_port=7788):
                     top_p_slider.change(fn=update_parameters, inputs=[temperature_slider, top_p_slider])
 
             with gr.Column(scale=6):
+                # def chat_with_vlm(message, history):
+                #     if not message:
+                #         yield history + [("错误", "错误：提问不能为空。")]
+                #         return
+                #     if not current_image_path:
+                #         yield history + [("错误", "错误：图片不能为空。")]
+                #         return
+
+                #     image_html = f'<img src="gradio_api/file={current_image_path}" alt="Image" style="width:100px;height:auto;">'
+                #     res_generator = chat(message, current_image_path)
+                #     response = ''
+                #     for res in res_generator:
+                #         response += res
+                #         yield history + [(f"{image_html} {message}", response)]
                 def chat_with_vlm(message, history):
+                    global current_image_path
+                    
                     if not message:
-                        yield history + [("错误", "错误：提问不能为空。")]
+                        yield history + [{"role": "user", "content": "错误：提问不能为空。"}]
                         return
                     if not current_image_path:
-                        yield history + [("错误", "错误：图片不能为空。")]
+                        yield history + [{"role": "user", "content": "错误：图片不能为空。"}]
                         return
 
-                    image_html = f'<img src="gradio_api/file={current_image_path}" alt="Image" style="width:100px;height:auto;">'
+                    # 1. 统一路径斜杠
+                    fixed_path = current_image_path.replace("\\", "/")
+                    
+                    # 2. 关键修改：使用 Gradio 官方的 gr.FileData 对象
+                    # Gradio 5.x 要求多模态内容是一个列表，里面包含 FileData 对象和 纯字符串
+                    user_content = [
+    {"path": fixed_path},  # 简化写法，有些版本会自动识别为图片
+    message
+]
+                    
                     res_generator = chat(message, current_image_path)
                     response = ''
                     for res in res_generator:
                         response += res
-                        yield history + [(f"{image_html} {message}", response)]
-
+                        # 3. 构造符合最新规范的字典
+                        yield history + [
+                            {"role": "user", "content": user_content},
+                            {"role": "assistant", "content": response}
+                        ]                
+                        
+                        
                 chatbot = gr.Chatbot(label="MiniMind-Vision", height=680)
                 with gr.Row():
                     with gr.Column(scale=8):
@@ -174,14 +208,19 @@ def launch_gradio_server(server_name="0.0.0.0", server_port=7788):
                 #     examples=["描述一下这个图片的内容。", "画面里面有什么？", "画面里的天气怎么样？"],
                 #     inputs=message_input)
 
-        demo.launch(server_name=server_name, server_port=server_port)
+        # 找到这一行并修改
+        demo.launch(
+            server_name=server_name, 
+            server_port=server_port,
+            allowed_paths=["F:/Project/mini-vlm/minimind-v/", "C:/"] # 允许 Gradio 访问你的项目盘符或具体路径
+        )
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Chat with MiniMind")
     parser.add_argument('--load_from', default='../model', type=str, help="模型加载路径（model=原生torch权重，其他路径=transformers格式）")
     parser.add_argument('--save_dir', default='out', type=str, help="模型权重目录")
-    parser.add_argument('--weight', default='sft_vlm', type=str, help="权重名称前缀（pretrain_vlm, sft_vlm）")
+    parser.add_argument('--weight', default='llm', type=str, help="权重名称前缀（pretrain_vlm, sft_vlm）")
     parser.add_argument('--temperature', default=0.65, type=float, help="生成温度，控制随机性（0-1，越大越随机）")
     parser.add_argument('--top_p', default=0.85, type=float, help="nucleus采样阈值（0-1）")
     parser.add_argument('--device', default='cuda' if torch.cuda.is_available() else 'cpu', type=str, help="运行设备")
