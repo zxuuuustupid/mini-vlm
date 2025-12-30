@@ -6,3 +6,5 @@ docs-minimind-v/
 .vscode/
 clip-vit-base-patch16/
 __pycache__
+*.parquet
+checkpoints/
