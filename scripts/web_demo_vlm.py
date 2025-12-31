@@ -102,13 +102,14 @@ def launch_gradio_server(server_name="0.0.0.0", server_port=7788):
     global temperature, top_p
     temperature = args.temperature
     top_p = args.top_p
+    
 
     with gr.Blocks() as demo:
         gr.HTML(f"""
             <div style="text-align: center; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center;">
                 <img src="https://www.modelscope.cn/api/v1/studio/gongjy/MiniMind/repo?Revision=master&FilePath=images%2Flogo2.png&View=true" 
                      style="height: 60px;">
-                <span style="margin: 0 0 0 1rem;font-size:40px;font-style: italic;font-weight:bold;">Hi, I'm MiniMind2-V</span>
+                <span style="margin: 0 0 0 1rem;font-size:40px;font-style: italic;font-weight:bold;">Hi, I'm JusinBot</span>
             </div>
             """)
 
