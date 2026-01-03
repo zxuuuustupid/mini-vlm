@@ -221,7 +221,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Chat with MiniMind")
     parser.add_argument('--load_from', default='../model', type=str, help="模型加载路径（model=原生torch权重，其他路径=transformers格式）")
     parser.add_argument('--save_dir', default='out', type=str, help="模型权重目录")
-    parser.add_argument('--weight', default='llm', type=str, help="权重名称前缀（pretrain_vlm, sft_vlm）")
+    parser.add_argument('--weight', default='sft_vlm', type=str, help="权重名称前缀（pretrain_vlm, sft_vlm）")
     parser.add_argument('--temperature', default=0.65, type=float, help="生成温度，控制随机性（0-1，越大越随机）")
     parser.add_argument('--top_p', default=0.85, type=float, help="nucleus采样阈值（0-1）")
     parser.add_argument('--device', default='cuda' if torch.cuda.is_available() else 'cpu', type=str, help="运行设备")
